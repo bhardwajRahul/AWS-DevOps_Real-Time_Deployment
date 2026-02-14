@@ -4,6 +4,7 @@
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-Pipeline-blue?style=for-the-badge&logo=github-actions&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Web%20Server-Nginx-green?style=for-the-badge&logo=nginx&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.0-brightgreen?style=for-the-badge)
 
 ![AWS DevOps](https://imgur.com/YlMBIaa.png)  
 
@@ -15,7 +16,7 @@ This repository demonstrates a **real-time AWS DevOps deployment pipeline** desi
 - **Pre-Production (Pre-PROD)** – Staging for validation and QA  
 - **Production** – Final deployment for end users  
 
-By leveraging AWS services and modern DevOps tools, this setup ensures a seamless, automated, and scalable CI/CD workflow.  
+By leveraging AWS services and modern DevOps tools, this setup ensures a seamless, automated, and scalable CI/CD workflow.
 
 ---
 
@@ -29,26 +30,41 @@ By leveraging AWS services and modern DevOps tools, this setup ensures a seamles
 ✅ **Monitoring & Logging** – AWS CloudWatch & Prometheus  
 ✅ **Security & Compliance** – IAM, AWS Secrets Manager, and best DevSecOps practices  
 
+### 🆕 **Version 2.0 Enhancements**
+✅ **Enhanced Security** – Security headers, rate limiting, and SSL/TLS configuration  
+✅ **Performance Optimization** – Caching strategies, gzip compression, and asset optimization  
+✅ **Better Error Handling** – Retry logic, comprehensive logging, and graceful failure recovery  
+✅ **Environment Management** – Separate configurations for dev, staging, and production  
+✅ **Monitoring & Alerting** – Health checks, performance metrics, and automated alerts  
+✅ **Accessibility Improvements** – Semantic HTML5, ARIA labels, and keyboard navigation  
+
 ### 📋 **Project Structure**
 ```
-├── appspec.yml              # AWS CodeDeploy application specification
-├── buildspec.yml            # AWS CodeBuild build specification
-├── index.html               # Main application file
+├── appspec.yml              # AWS CodeDeploy application specification (v2.0)
+├── buildspec.yml            # AWS CodeBuild build specification (v2.0)
+├── index.html               # Main application file (enhanced)
+├── nginx-security.conf      # Nginx security hardening configuration
+├── environments/            # Environment-specific configurations
+│   ├── dev.env             # Development environment settings
+│   ├── staging.env         # Staging environment settings
+│   └── prod.env            # Production environment settings
 ├── scripts/
-│   ├── install_nginx.sh    # Nginx installation script
-│   ├── start_nginx.sh       # Nginx startup script
+│   ├── install_nginx.sh    # Nginx installation script (v2.0)
+│   ├── start_nginx.sh       # Nginx startup script (v2.0)
 │   ├── validate_environment.sh  # Environment validation
-│   └── validate_deployment.sh   # Deployment validation
+│   ├── validate_deployment.sh   # Deployment validation
+│   └── load_environment_config.sh # Environment configuration loader
 └── README.md               # Project documentation
 ```
 
 ### 🔧 **Scripts Overview**
-- **`validate_environment.sh`** - Pre-deployment system validation
-- **`install_nginx.sh`** - Automated Nginx installation and configuration
-- **`start_nginx.sh`** - Nginx service management with retry logic
-- **`validate_deployment.sh`** - Post-deployment verification
+- **`validate_environment.sh`** - Pre-deployment system validation with enhanced checks
+- **`install_nginx.sh`** - Automated Nginx installation with retry logic and security hardening
+- **`start_nginx.sh`** - Nginx service management with comprehensive health checks
+- **`validate_deployment.sh`** - Post-deployment verification with performance testing
+- **`load_environment_config.sh`** - Environment-specific configuration loader
 
-This project is designed to enhance agility, reduce manual interventions, and ensure reliable software delivery.  
+This project is designed to enhance agility, reduce manual interventions, and ensure reliable software delivery.
 
 ---
 
@@ -83,6 +99,8 @@ The deployment includes comprehensive testing:
 - Service health checks
 - HTTP response testing
 - Content delivery verification
+- Performance testing
+- Security header validation
 
 ---
 
@@ -99,12 +117,58 @@ For a complete walkthrough with **detailed screenshots**, visit the blog post:
 - `/var/log/nginx-install.log` - Nginx installation logs
 - `/var/log/nginx-start.log` - Nginx startup logs
 - `/var/log/environment-validation.log` - Environment validation logs
+- `/var/log/environment-config.log` - Environment configuration logs
 
 ### Health Checks
 - Service status monitoring
 - HTTP response validation
 - Content delivery verification
 - System resource monitoring
+- Performance metrics collection
+
+### Security Features
+- Security headers implementation
+- Rate limiting configuration
+- SSL/TLS hardening
+- File permission restrictions
+- Access control policies
+
+---
+
+## 🛠️ Configuration Management
+
+### Environment-Specific Settings
+The project supports three environments with distinct configurations:
+
+#### Development Environment
+- Debug mode enabled
+- Relaxed security settings
+- Enhanced logging
+- Development tools enabled
+
+#### Staging Environment
+- Production-like settings
+- Moderate security
+- Comprehensive testing tools
+- Performance monitoring
+
+#### Production Environment
+- Maximum security
+- Optimized performance
+- Minimal logging
+- Monitoring and alerting
+
+### Loading Environment Configuration
+```bash
+# Load development configuration
+./scripts/load_environment_config.sh dev
+
+# Load staging configuration
+./scripts/load_environment_config.sh staging
+
+# Load production configuration
+./scripts/load_environment_config.sh prod
+```
 
 ---
 
@@ -118,6 +182,13 @@ We welcome contributions! Please feel free to submit a Pull Request. For major c
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+### Code Quality Standards
+- Follow shell scripting best practices
+- Add comprehensive error handling
+- Include logging for debugging
+- Test across all environments
+- Document new features
 
 ---
 
@@ -152,6 +223,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - AWS for providing excellent cloud services
 - The DevOps community for continuous learning and support
 - All contributors who help improve this project
+- Security experts for best practices and guidelines
+
+---
+
+## 📋 **Changelog**
+
+### Version 2.0 (Current)
+- ✨ Enhanced security headers and SSL/TLS configuration
+- ✨ Environment-specific configuration management
+- ✨ Improved error handling and retry logic
+- ✨ Performance optimizations and caching
+- ✨ Accessibility improvements in HTML
+- ✨ Comprehensive monitoring and logging
+- ✨ Build caching and optimization
+
+### Version 1.0
+- 🎉 Initial release with basic CI/CD pipeline
+- 🎉 Nginx installation and configuration
+- 🎉 Basic deployment validation
 
 ---
 

@@ -1,27 +1,133 @@
+# AWS CodeBuild Build Specification
+# Enhanced version with caching, optimization, and better error handling
+# Version: 2.0
 version: 0.2
+
+# Cache configuration for faster builds
+cache:
+  paths:
+    - '/root/.npm/**/*'
+    - '/var/cache/apt/**/*'
+    - '/usr/share/nginx/**/*'
+
+# Environment variables
+env:
+  variables:
+    NODE_ENV: production
+    NGINX_VERSION: latest
+    BUILD_TIMEOUT: 300
+  parameter-store:
+    # Add any secure parameters from AWS Systems Manager Parameter Store
+    # EXAMPLE: API_KEY: /myapp/api/key
 
 phases:
   install:
     runtime-versions:
       nodejs: 18
+      python: 3.9
     commands:
       - echo "=== INSTALL PHASE STARTED ==="
-      - echo "Installing required dependencies..."
-      - sudo apt-get update -y
-      - echo "Checking Nginx installation status..."
-      - if ! dpkg -l | grep -qw nginx; then 
-          echo "Installing Nginx..."; 
-          sudo apt-get install nginx -y; 
+      - echo "Build started on $(date) with build ID $CODEBUILD_BUILD_ID"
+      
+      # Update package lists with retry logic
+      - |
+        for i in {1..3}; do
+          if apt-get update -y; then
+            echo "Package lists updated successfully"
+            break
+          else
+            echo "Package update attempt $i failed"
+            if [ $i -eq 3 ]; then
+              echo "Failed to update packages after 3 attempts"
+              exit 1
+            fi
+            sleep 5
+          fi
+        done
+      
+      # Install essential packages with error handling
+      - |
+        echo "Installing essential packages..."
+        apt-get install -y \
+          curl \
+          wget \
+          unzip \
+          git \
+          software-properties-common \
+          apt-transport-https \
+          ca-certificates \
+          gnupg \
+          lsb-release || {
+          echo "Failed to install essential packages"
+          exit 1
+        }
+      
+      # Check and install Nginx with version control
+      - |
+        echo "Checking Nginx installation status..."
+        if ! dpkg -l | grep -qw nginx; then 
+          echo "Installing Nginx..."
+          apt-get install nginx -y || {
+            echo "Failed to install Nginx"
+            exit 1
+          }
+          echo "✅ Nginx installed successfully"
         else 
-          echo "✅ Nginx is already installed"; 
+          echo "✅ Nginx is already installed"
+          nginx -v
         fi
+      
+      # Install Node.js dependencies if package.json exists
+      - |
+        if [ -f package.json ]; then
+          echo "Installing Node.js dependencies..."
+          npm ci --production --silent || {
+            echo "Failed to install Node.js dependencies"
+            exit 1
+          }
+        fi
+      
       - echo "=== INSTALL PHASE COMPLETED ==="
 
   pre_build:
     commands:
       - echo "=== PRE-BUILD PHASE STARTED ==="
-      - echo "Validating source files..."
-      - if [ ! -f index.html ]; then echo "❌ Error: index.html not found!" && exit 1; fi
+      
+      # Enhanced source file validation
+      - |
+        echo "Validating source files..."
+        if [ ! -f index.html ]; then 
+          echo "❌ Error: index.html not found!" 
+          exit 1 
+        fi
+        
+        # Validate HTML syntax
+        echo "Validating HTML syntax..."
+        if command -v tidy &>/dev/null; then
+          tidy -q -e index.html || echo "HTML validation warnings found"
+        fi
+        
+        # Check for required files
+        required_files=("index.html")
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file found"
+          else
+            echo "❌ Required file $file not found"
+            exit 1
+          fi
+        done
+      
+      # Security scan on source files
+      - |
+        echo "Running security scan on source files..."
+        if command -v grep &>/dev/null; then
+          # Check for potential security issues
+          if grep -r "password\|secret\|key\|token" . --exclude-dir=.git --exclude="*.log" | head -5; then
+            echo "⚠️ Warning: Potential sensitive information found"
+          fi
+        fi
+      
       - echo "✅ Source files validated"
       - echo "=== PRE-BUILD PHASE COMPLETED ==="
 
@@ -29,50 +135,194 @@ phases:
     commands:
       - echo "=== BUILD PHASE STARTED ==="
       - echo "Build started on $(date)"
-      - echo "Copying application files..."
-      - sudo cp index.html /var/www/html/
-      - echo "Setting proper permissions..."
-      - sudo chown -R www-data:www-data /var/www/html/
-      - sudo chmod -R 755 /var/www/html/
+      
+      # Create backup of existing deployment
+      - |
+        if [ -d "/var/www/html" ]; then
+          echo "Creating backup of existing deployment..."
+          backup_dir="/var/www/html.backup.$(date +%Y%m%d_%H%M%S)"
+          cp -r /var/www/html "$backup_dir" || echo "Warning: Could not create backup"
+          echo "Backup created at $backup_dir"
+        fi
+      
+      # Copy application files with error handling
+      - |
+        echo "Copying application files..."
+        cp -r * /var/www/html/ || {
+          echo "Failed to copy application files"
+          exit 1
+        }
+      
+      # Set proper permissions with security considerations
+      - |
+        echo "Setting proper permissions..."
+        chown -R www-data:www-data /var/www/html/ || {
+          echo "Failed to set ownership"
+          exit 1
+        }
+        
+        chmod -R 755 /var/www/html/ || {
+          echo "Failed to set directory permissions"
+          exit 1
+        }
+        
+        # Restrict permissions on sensitive files
+        find /var/www/html -name "*.sh" -exec chmod 750 {} \;
+        find /var/www/html -name "*.conf" -exec chmod 644 {} \;
+      
+      # Optimize static assets
+      - |
+        echo "Optimizing static assets..."
+        if command -v gzip &>/dev/null; then
+          find /var/www/html -name "*.html" -o -name "*.css" -o -name "*.js" | while read file; do
+            gzip -c "$file" > "$file.gz" || true
+          done
+        fi
+      
       - echo "✅ Build completed successfully"
       - echo "=== BUILD PHASE COMPLETED ==="
 
   post_build:
     commands:
       - echo "=== POST-BUILD PHASE STARTED ==="
-      - echo "Configuring and restarting Nginx..."
-      - sudo systemctl restart nginx
-      - sleep 2  # Allow Nginx to fully restart
-      - echo "✅ Nginx restarted successfully!"
+      
+      # Configure and restart Nginx with validation
+      - |
+        echo "Configuring and restarting Nginx..."
+        
+        # Test Nginx configuration
+        nginx -t || {
+          echo "Nginx configuration test failed"
+          exit 1
+        }
+        
+        # Restart Nginx
+        systemctl restart nginx || {
+          echo "Failed to restart Nginx"
+          exit 1
+        }
+        
+        # Wait for Nginx to fully restart
+        sleep 3
+      
+      # Verify Nginx status
+      - |
+        if systemctl is-active --quiet nginx; then 
+          echo "✅ Nginx restarted successfully!"
+        else 
+          echo "❌ Nginx failed to restart!" 
+          systemctl status nginx --no-pager
+          exit 1
+        fi
+      
+      # Generate build report
+      - |
+        echo "Generating build report..."
+        report_file="/var/www/html/build-info.json"
+        cat > "$report_file" << EOF
+        {
+          "build_id": "$CODEBUILD_BUILD_ID",
+          "build_time": "$(date -Iseconds)",
+          "git_commit": "${CODEBUILD_RESOLVED_SOURCE_VERSION:-unknown}",
+          "nginx_version": "$(nginx -v 2>&1 | cut -d' ' -f3)",
+          "build_number": "$CODEBUILD_BUILD_NUMBER"
+        }
+        EOF
+      
       - echo "=== POST-BUILD PHASE COMPLETED ==="
 
   test:
     commands:
       - echo "=== TEST PHASE STARTED ==="
       - echo "Running comprehensive tests..."
-      - echo "Testing Nginx service status..."
-      - if systemctl is-active --quiet nginx; then 
-          echo "✅ Nginx is running"; 
+      
+      # Nginx service status test
+      - |
+        echo "Testing Nginx service status..."
+        if systemctl is-active --quiet nginx; then 
+          echo "✅ Nginx is running"
         else 
-          echo "❌ Nginx is not running!" && exit 1; 
+          echo "❌ Nginx is not running!" 
+          exit 1
         fi
-      - echo "Testing web server response..."
-      - if curl -s -f http://localhost | grep -q "<html>"; then 
-          echo "✅ index.html is being served successfully!"; 
+      
+      # HTTP response test with retry
+      - |
+        echo "Testing web server response..."
+        for i in {1..5}; do
+          if curl -s -f http://localhost | grep -q "<html>"; then 
+            echo "✅ index.html is being served successfully!"
+            break
+          else 
+            echo "HTTP test attempt $i failed"
+            if [ $i -eq 5 ]; then
+              echo "❌ index.html is NOT served correctly!" 
+              exit 1
+            fi
+            sleep 2
+          fi
+        done
+      
+      # HTTP status code test
+      - |
+        echo "Testing HTTP status code..."
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost)
+        if [ "$HTTP_STATUS" = "200" ]; then 
+          echo "✅ HTTP 200 response received"
         else 
-          echo "❌ index.html is NOT served correctly!" && exit 1; 
+          echo "❌ HTTP $HTTP_STATUS response received" 
+          exit 1
         fi
-      - echo "Testing HTTP status code..."
-      - HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost)
-      - if [ "$HTTP_STATUS" = "200" ]; then 
-          echo "✅ HTTP 200 response received"; 
-        else 
-          echo "❌ HTTP $HTTP_STATUS response received" && exit 1; 
+      
+      # Performance test
+      - |
+        echo "Running basic performance test..."
+        response_time=$(curl -o /dev/null -s -w "%{time_total}" http://localhost)
+        if (( $(echo "$response_time < 2.0" | bc -l) )); then
+          echo "✅ Response time acceptable: ${response_time}s"
+        else
+          echo "⚠️ Slow response time: ${response_time}s"
         fi
+      
+      # Security headers test
+      - |
+        echo "Testing security headers..."
+        headers=$(curl -s -I http://localhost)
+        if echo "$headers" | grep -q "X-Frame-Options"; then
+          echo "✅ Security headers present"
+        else
+          echo "⚠️ Some security headers missing"
+        fi
+      
       - echo "✅ All tests passed!"
       - echo "=== TEST PHASE COMPLETED ==="
 
+# Enhanced artifacts configuration
 artifacts:
   files:
     - '**/*'
+    - '!**/.git/**'
+    - '!**/node_modules/**'
+    - '!**/*.log'
   name: deployment-artifacts-$(date +%Y%m%d-%H%M%S)
+  secondary-artifacts:
+    logs:
+      files:
+        - '**/*.log'
+        - '**/build-info.json'
+      name: build-logs-$(date +%Y%m%d-%H%M%S)
+    config:
+      files:
+        - 'nginx-security.conf'
+        - 'appspec.yml'
+        - 'buildspec.yml'
+      name: config-files-$(date +%Y%m%d-%H%M%S)
+
+# Reports configuration for test results
+reports:
+  test-reports:
+    files:
+      - '**/*test*.xml'
+      - '**/*test*.json'
+    discard-paths: yes
+    file-format: JunitXml
