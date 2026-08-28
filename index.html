@@ -3,62 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Discover high-quality insights on DevOps, Cloud, and Automation by HARSHHAA. Follow for expert DevOps and Cloud engineering content.">
-    <meta name="keywords" content="DevOps, Cloud, AWS, Automation, Infrastructure, CI/CD, Hashnode, Blog">
+    <meta name="description" content="Real-time AWS DevOps CI/CD pipeline deployment demonstration featuring automated CodeBuild, CodeDeploy, and hardened Nginx infrastructure.">
+    <meta name="keywords" content="AWS, DevOps, CI/CD, CodePipeline, CodeBuild, CodeDeploy, Nginx, Cloud Architecture, Automation">
     <meta name="author" content="HARSHHAA">
     <meta name="robots" content="index, follow">
     
-    <!-- Security Headers -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="DENY">
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
-    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-    <meta name="theme-color" content="#2c5364">
-    
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="DevOps & Cloud Blogs by HARSHHAA">
-    <meta property="og:description" content="Discover high-quality insights on DevOps, Cloud, and Automation.">
+    <!-- Open Graph & Social Cards -->
+    <meta property="og:title" content="AWS DevOps Real-Time Deployment | Dev → Staging → Prod">
+    <meta property="og:description" content="Automated end-to-end CI/CD pipeline using AWS CodeBuild, CodeDeploy, and hardened Nginx.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://blog.prodevopsguytech.com">
-    <meta property="og:image" content="https://imgur.com/YlMBIaa.png">
-    <meta property="og:site_name" content="DevOps & Cloud Blogs">
+    <meta property="og:site_name" content="AWS DevOps Pipeline">
     
-    <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="DevOps & Cloud Blogs by HARSHHAA">
-    <meta name="twitter:description" content="Discover high-quality insights on DevOps, Cloud, and Automation.">
-    <meta name="twitter:image" content="https://imgur.com/YlMBIaa.png">
+    <meta name="twitter:title" content="AWS DevOps Real-Time Deployment">
+    <meta name="twitter:description" content="Automated end-to-end CI/CD pipeline using AWS DevOps tools.">
+
+    <title>AWS DevOps Real-Time Deployment | Dev → Staging → Production</title>
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" as="style">
+    <!-- Typography & Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="//blog.prodevopsguy.xyz">
-    
-    <title>DevOps & Cloud Blogs by HARSHHAA | Expert DevOps Insights</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <style>
-        /* CSS Reset and Base Styles */
+        :root {
+            --bg-gradient: radial-gradient(circle at 10% 20%, #0d131f 0%, #080b12 90%);
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --accent-primary: #ff9900;
+            --accent-secondary: #00c6ff;
+            --accent-gradient: linear-gradient(135deg, #ff9900 0%, #ff5252 100%);
+            --btn-gradient: linear-gradient(135deg, #0072ff 0%, #00c6ff 100%);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --badge-bg: rgba(16, 185, 129, 0.15);
+            --badge-border: rgba(16, 185, 129, 0.3);
+            --badge-text: #34d399;
+        }
+
         *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        /* Google Font with fallback */
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-
-        :root {
-            --primary-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            --button-gradient: linear-gradient(90deg, #7b2ff7, #d527b7);
-            --button-hover-gradient: linear-gradient(90deg, #d527b7, #7b2ff7);
-            --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.9);
-            --container-bg: rgba(255, 255, 255, 0.12);
-            --border-color: rgba(255, 255, 255, 0.2);
-            --shadow-color: rgba(0, 0, 0, 0.3);
-            --button-shadow: rgba(123, 47, 247, 0.4);
-            --button-hover-shadow: rgba(123, 47, 247, 0.6);
         }
 
         html {
@@ -66,198 +53,311 @@
         }
 
         body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: var(--primary-gradient);
-            color: var(--text-primary);
-            text-align: center;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            padding: 24px;
             overflow-x: hidden;
             line-height: 1.6;
-            font-size: 16px;
         }
+
+        /* Ambient Glow Background Effect */
+        .glow-sphere {
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.25;
+        }
+        .glow-1 { top: -100px; left: -100px; background: #ff9900; }
+        .glow-2 { bottom: -100px; right: -100px; background: #0072ff; }
 
         .container {
-            max-width: 650px;
-            width: 90%;
-            background: var(--container-bg);
-            padding: 35px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px var(--shadow-color);
-            backdrop-filter: blur(12px);
-            animation: fadeIn 1.5s ease-in-out;
-            border: 2px solid var(--border-color);
-            margin: 20px;
             position: relative;
+            z-index: 1;
+            max-width: 680px;
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 48px 40px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
-                padding: 25px;
-                margin: 10px;
-                width: 95%;
-            }
-            
-            h1 {
-                font-size: 28px;
-            }
-            
-            p {
-                font-size: 16px;
-            }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        @media (max-width: 480px) {
-            .container {
-                padding: 20px;
-                margin: 5px;
-            }
-            
-            h1 {
-                font-size: 24px;
-            }
-            
-            p {
-                font-size: 14px;
-            }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--badge-bg);
+            border: 1px solid var(--badge-border);
+            color: var(--badge-text);
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            letter-spacing: 0.02em;
         }
 
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
         h1 {
-            font-size: clamp(24px, 5vw, 32px);
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 800;
             line-height: 1.2;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        p {
-            font-size: clamp(14px, 2.5vw, 18px);
-            margin-bottom: 1rem;
-            opacity: 0.9;
+        .highlight {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .cta-button {
-            display: inline-block;
-            background: var(--button-gradient);
-            color: var(--text-primary);
-            text-decoration: none;
+        p.lead {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            max-width: 540px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .pipeline-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 36px;
+        }
+
+        .pipeline-step {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px 12px;
+            border-radius: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .pipeline-step:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .step-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .step-title {
+            font-size: 0.85rem;
             font-weight: 600;
-            padding: 12px 28px;
-            border-radius: 30px;
-            transition: all 0.3s ease-in-out;
-            box-shadow: 0 4px 10px var(--button-shadow);
-            cursor: pointer;
-            border: 2px solid transparent;
-            font-size: 16px;
-            position: relative;
-            overflow: hidden;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .cta-button:hover {
-            background: var(--button-hover-gradient);
-            transform: scale(1.07);
-            box-shadow: 0 6px 15px var(--button-hover-shadow);
+        .step-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
         }
 
-        .cta-button:focus {
-            outline: 3px solid rgba(123, 47, 247, 0.5);
-            outline-offset: 2px;
-            border-color: rgba(255, 255, 255, 0.3);
+        .actions-group {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: center;
+            justify-content: center;
         }
 
-        .cta-button:active {
-            transform: scale(1.02);
-        }
-
-        /* Accessibility improvements */
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+        @media (min-width: 480px) {
+            .actions-group {
+                flex-direction: row;
             }
         }
 
-        /* Skip link for accessibility */
-        .skip-link {
-            position: absolute;
-            top: -40px;
-            left: 6px;
-            background: #000;
-            color: #fff;
-            padding: 8px;
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--btn-gradient);
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 14px 28px;
+            border-radius: 12px;
             text-decoration: none;
-            z-index: 1000;
-            border-radius: 4px;
+            box-shadow: 0 10px 25px -5px rgba(0, 114, 255, 0.4);
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 260px;
         }
-        
-        .skip-link:focus {
-            top: 6px;
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -5px rgba(0, 114, 255, 0.6);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 14px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 260px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            margin-top: 36px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 580px) {
+            .container {
+                padding: 32px 20px;
+            }
+            .pipeline-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Skip to content link for accessibility -->
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <div class="glow-sphere glow-1" aria-hidden="true"></div>
+    <div class="glow-sphere glow-2" aria-hidden="true"></div>
 
-    <main id="main-content" class="container" role="main">
+    <main class="container" role="main">
+        <div class="status-badge">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            AWS DevOps Pipeline &bull; Live & Healthy
+        </div>
+
         <header>
-            <h1>🚀 DevOps & Cloud Blogs by HARSHHAA</h1>
+            <h1>Real-Time <span class="highlight">AWS DevOps</span> Deployment</h1>
         </header>
-        
-        <section>
-            <p>Discover high-quality insights on DevOps, Cloud, and Automation.</p>
-            <p>Follow me on Hashnode:</p>
+
+        <p class="lead">
+            Production-ready CI/CD infrastructure leveraging AWS CodeBuild, AWS CodeDeploy, and security-hardened Nginx.
+        </p>
+
+        <section class="pipeline-grid" aria-label="Deployment Environments">
+            <div class="pipeline-step">
+                <span class="step-icon">⚡</span>
+                <div class="step-title">Development</div>
+                <div class="step-desc">Continuous build & linting</div>
+            </div>
+            <div class="pipeline-step">
+                <span class="step-icon">🛡️</span>
+                <div class="step-title">Staging</div>
+                <div class="step-desc">Integration & QA checks</div>
+            </div>
+            <div class="pipeline-step">
+                <span class="step-icon">🚀</span>
+                <div class="step-title">Production</div>
+                <div class="step-desc">Zero-downtime release</div>
+            </div>
+        </section>
+
+        <div class="actions-group">
             <a href="https://blog.prodevopsguy.xyz" 
                target="_blank" 
-               rel="noopener noreferrer"
-               aria-label="Read DevOps and Cloud blogs by HARSHHAA on Hashnode"
-               class="cta-button">
-                Read My Blogs
+               rel="noopener noreferrer" 
+               class="btn-primary"
+               id="cta-blog-link">
+                <span>Read DevOps Blogs</span>
+                <span aria-hidden="true">&rarr;</span>
             </a>
-        </section>
+            <a href="https://github.com/NotHarshhaa/AWS-DevOps_Real-Time_Deployment" 
+               target="_blank" 
+               rel="noopener noreferrer" 
+               class="btn-secondary"
+               id="cta-github-link">
+                <span>GitHub Repository</span>
+            </a>
+        </div>
+
+        <footer>
+            Architected & Deployed by <a href="https://github.com/NotHarshhaa" target="_blank" rel="noopener noreferrer">@NotHarshhaa</a>
+        </footer>
     </main>
 
-    <!-- Structured Data for SEO -->
+    <!-- Structured Data (JSON-LD) for SEO -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
-        "@type": "Person",
-        "name": "HARSHHAA",
-        "url": "https://blog.prodevopsguytech.com",
-        "sameAs": [
-            "https://blog.prodevopsguy.xyz",
-            "https://github.com/NotHarshhaa"
-        ],
-        "jobTitle": "DevOps Engineer",
-        "description": "Expert insights on DevOps, Cloud, and Automation"
+        "@type": "SoftwareApplication",
+        "name": "AWS DevOps Real-Time Deployment",
+        "applicationCategory": "DevOpsApplication",
+        "operatingSystem": "Linux",
+        "author": {
+            "@type": "Person",
+            "name": "HARSHHAA",
+            "url": "https://github.com/NotHarshhaa"
+        }
     }
     </script>
 </body>

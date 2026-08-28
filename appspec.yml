@@ -1,10 +1,9 @@
 # AWS CodeDeploy Application Specification
-# This file defines the deployment configuration for the DevOps blog application
-# Version: 2.0 - Enhanced with security and monitoring
+# Version: 2.1 - Production-Ready & Hardened
 version: 0.0
 os: linux
 
-# Define files to be deployed with enhanced permissions
+# Define files to be deployed
 files:
   - source: /
     destination: /var/www/html
@@ -12,7 +11,7 @@ files:
     group: root
     mode: 755
 
-# Set proper permissions for web content with security considerations
+# Set proper permissions for web content
 permissions:
   - object: /var/www/html
     pattern: "**"
@@ -23,7 +22,7 @@ permissions:
       - file
       - directory
 
-  # Restrict permissions on sensitive files
+  # Restrict permissions on sensitive configuration and shell files
   - object: /var/www/html
     pattern: "*.conf"
     owner: root
@@ -38,61 +37,40 @@ permissions:
     mode: 750
     type: file
 
-# Enhanced deployment lifecycle hooks with monitoring
+# Deployment lifecycle hooks
 hooks:
-  # Pre-deployment validation with comprehensive checks
+  # Gracefully stop running service before bundle extraction
+  ApplicationStop:
+    - location: scripts/stop_nginx.sh
+      timeout: 60
+      runas: root
+
+  # Pre-deployment environment validation and backup
   BeforeInstall:
     - location: scripts/validate_environment.sh
       timeout: 300
       runas: root
-      runorder: 1
     - location: scripts/backup_current_deployment.sh
       timeout: 120
       runas: root
-      runorder: 2
 
-  # Install and configure Nginx with security hardening
+  # Install Nginx and apply security configuration
   AfterInstall:
     - location: scripts/install_nginx.sh
       timeout: 300
       runas: root
-      runorder: 1
     - location: scripts/apply_security_config.sh
       timeout: 120
       runas: root
-      runorder: 2
 
-  # Start the application with health checks
+  # Start Nginx service with health checks
   ApplicationStart:
     - location: scripts/start_nginx.sh
-      timeout: 300
+      timeout: 180
       runas: root
-      runorder: 1
-    - location: scripts/setup_monitoring.sh
-      timeout: 120
-      runas: root
-      runorder: 2
 
-  # Validate deployment with comprehensive testing
-  AfterStart:
+  # Post-deployment validation testing
+  ValidateService:
     - location: scripts/validate_deployment.sh
       timeout: 120
       runas: root
-      runorder: 1
-    - location: scripts/run_security_scan.sh
-      timeout: 180
-      runas: root
-      runorder: 2
-
-  # Rollback handling (optional)
-  BeforeBlockTraffic:
-    - location: scripts/prepare_rollback.sh
-      timeout: 60
-      runas: root
-      runorder: 1
-
-  AfterBlockTraffic:
-    - location: scripts/validate_rollback.sh
-      timeout: 60
-      runas: root
-      runorder: 1

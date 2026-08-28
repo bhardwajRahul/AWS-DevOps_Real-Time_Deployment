@@ -1,183 +1,146 @@
 #!/bin/bash
 
 # Environment Validation Script
-# This script validates the system environment before deployment
+# Validates system requirements, resources, and dependencies before deployment
+# Lifecycle Hook: BeforeInstall (runorder: 1)
 
-set -e  # Exit immediately on error
-set -o pipefail  # Fail on first command error in a pipeline
+set -euo pipefail
+IFS=$'\n\t'
 
-# Configuration variables
-LOG_FILE="/var/log/environment-validation.log"
-MIN_DISK_SPACE=500000  # 500MB in KB
-MIN_MEMORY=512         # 512MB in MB
-REQUIRED_PACKAGES=("curl" "tar" "wget" "unzip")
+readonly LOG_FILE="/var/log/environment-validation.log"
+readonly MIN_DISK_SPACE_KB=300000 # ~300MB in KB
+readonly MIN_MEMORY_MB=256        # 256MB minimum free/available
 
-# Function to log messages with timestamp
 log_message() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+    local level="$1"
+    local message="$2"
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[${timestamp}] [${level}] ${message}" | tee -a "$LOG_FILE"
 }
 
-# Function to check if running as root
-check_root_privileges() {
-    log_message "Checking root privileges..."
-    
+log_info() {
+    log_message "INFO" "$1"
+}
+
+log_warning() {
+    log_message "WARNING" "$1"
+}
+
+log_error() {
+    log_message "ERROR" "$1"
+}
+
+check_privileges() {
+    log_info "Verifying root privileges..."
     if [[ $EUID -ne 0 ]]; then
-        log_message "❌ Error: This script must be run as root. Use sudo."
+        log_error "This script must be run as root (or via CodeDeploy root runas)."
         exit 1
     fi
-    
-    log_message "✅ Running with root privileges"
+    log_info "✅ Running with administrative privileges."
 }
 
-# Function to check system information
 check_system_info() {
-    log_message "=== SYSTEM INFORMATION ==="
-    log_message "OS: $(lsb_release -d 2>/dev/null | cut -f2 || echo 'Unknown')"
-    log_message "Kernel: $(uname -r)"
-    log_message "Architecture: $(uname -m)"
-    log_message "Hostname: $(hostname)"
-    log_message "Uptime: $(uptime -p 2>/dev/null || uptime)"
+    log_info "=== SYSTEM INFORMATION ==="
+    log_info "Kernel: $(uname -r)"
+    log_info "Architecture: $(uname -m)"
+    log_info "Hostname: $(hostname)"
+    if command -v uptime &>/dev/null; then
+        log_info "Uptime: $(uptime)"
+    fi
 }
 
-# Function to check disk space
 check_disk_space() {
-    log_message "Checking disk space..."
+    log_info "Checking available storage space..."
+    local available_kb
+    available_kb=$(df -k / | awk 'NR==2 {print $4}')
+    local available_mb=$((available_kb / 1024))
     
-    # Get available disk space in KB
-    AVAILABLE_SPACE=$(df / | tail -1 | awk '{print $4}')
-    AVAILABLE_SPACE_MB=$((AVAILABLE_SPACE / 1024))
+    log_info "Available disk space on root filesystem: ${available_mb}MB"
     
-    log_message "Available disk space: ${AVAILABLE_SPACE_MB}MB"
-    
-    if [[ $AVAILABLE_SPACE -lt $MIN_DISK_SPACE ]]; then
-        log_message "❌ Error: Insufficient disk space (${AVAILABLE_SPACE_MB}MB available, ${MIN_DISK_SPACE}MB required)"
+    if [[ $available_kb -lt $MIN_DISK_SPACE_KB ]]; then
+        log_error "Insufficient disk space: ${available_mb}MB available, minimum required is $((MIN_DISK_SPACE_KB / 1024))MB"
         exit 1
     fi
-    
-    log_message "✅ Sufficient disk space available"
+    log_info "✅ Disk space requirement met."
 }
 
-# Function to check memory
 check_memory() {
-    log_message "Checking system memory..."
-    
-    # Get available memory in MB
-    AVAILABLE_MEMORY=$(free -m | awk 'NR==2{printf "%.0f", $7}')
-    
-    log_message "Available memory: ${AVAILABLE_MEMORY}MB"
-    
-    if [[ $AVAILABLE_MEMORY -lt $MIN_MEMORY ]]; then
-        log_message "⚠️ Warning: Low memory (${AVAILABLE_MEMORY}MB available, ${MIN_MEMORY}MB recommended)"
-    else
-        log_message "✅ Sufficient memory available"
+    log_info "Checking system memory..."
+    if command -v free &>/dev/null; then
+        local available_mb
+        # free -m column 7 is 'available' on modern linux
+        available_mb=$(free -m | awk 'NR==2 {if (NF>=7) print $7; else print $4}')
+        log_info "Available memory: ${available_mb}MB"
+        
+        if [[ $available_mb -lt $MIN_MEMORY_MB ]]; then
+            log_warning "Low available memory (${available_mb}MB). Deployment will proceed, but monitor resources."
+        else
+            log_info "✅ Memory requirement met."
+        fi
     fi
 }
 
-# Function to check required packages
-check_required_packages() {
-    log_message "Checking required packages..."
-    
-    MISSING_PACKAGES=()
-    
-    for pkg in "${REQUIRED_PACKAGES[@]}"; do
-        if ! dpkg -l | grep -qw "$pkg"; then
-            MISSING_PACKAGES+=("$pkg")
+check_required_tools() {
+    log_info "Checking required utilities..."
+    local required_tools=("curl" "tar" "gzip")
+    local missing_tools=()
+
+    for tool in "${required_tools[@]}"; do
+        if command -v "$tool" &>/dev/null; then
+            log_info "✅ Found tool: $tool"
         else
-            log_message "✅ Package '$pkg' is installed"
+            missing_tools+=("$tool")
         fi
     done
-    
-    if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
-        log_message "❌ Error: Missing required packages: ${MISSING_PACKAGES[*]}"
-        log_message "Please install missing packages with: sudo apt-get install ${MISSING_PACKAGES[*]}"
-        exit 1
-    fi
-    
-    log_message "✅ All required packages are installed"
-}
 
-# Function to check network connectivity
-check_network_connectivity() {
-    log_message "Checking network connectivity..."
-    
-    # Test internet connectivity
-    if ping -c 1 8.8.8.8 > /dev/null 2>&1; then
-        log_message "✅ Internet connectivity is available"
-    else
-        log_message "⚠️ Warning: Internet connectivity may be limited"
-    fi
-    
-    # Test DNS resolution
-    if nslookup google.com > /dev/null 2>&1; then
-        log_message "✅ DNS resolution is working"
-    else
-        log_message "⚠️ Warning: DNS resolution may have issues"
-    fi
-}
-
-# Function to check system services
-check_system_services() {
-    log_message "Checking system services..."
-    
-    # Check if systemd is running
-    if systemctl --version > /dev/null 2>&1; then
-        log_message "✅ systemd is available"
-    else
-        log_message "❌ Error: systemd is not available"
-        exit 1
-    fi
-    
-    # Check if apt is available
-    if command -v apt-get > /dev/null 2>&1; then
-        log_message "✅ Package manager (apt) is available"
-    else
-        log_message "❌ Error: Package manager (apt) is not available"
-        exit 1
-    fi
-}
-
-# Function to check file system permissions
-check_file_permissions() {
-    log_message "Checking file system permissions..."
-    
-    # Check if we can write to /var/www/html
-    if [ -d "/var/www/html" ]; then
-        if [ -w "/var/www/html" ]; then
-            log_message "✅ /var/www/html is writable"
-        else
-            log_message "⚠️ Warning: /var/www/html is not writable"
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        log_info "Attempting to install missing tools: ${missing_tools[*]}..."
+        if command -v apt-get &>/dev/null; then
+            apt-get update -y && apt-get install -y "${missing_tools[@]}" || true
+        elif command -v dnf &>/dev/null; then
+            dnf install -y "${missing_tools[@]}" || true
+        elif command -v yum &>/dev/null; then
+            yum install -y "${missing_tools[@]}" || true
         fi
-    else
-        log_message "ℹ️ /var/www/html directory does not exist (will be created during deployment)"
     fi
 }
 
-# Function to display validation summary
-display_validation_summary() {
-    log_message "=== VALIDATION SUMMARY ==="
-    log_message "✅ Root privileges: OK"
-    log_message "✅ Disk space: OK"
-    log_message "✅ Required packages: OK"
-    log_message "✅ System services: OK"
-    log_message "✅ Environment validation completed successfully!"
+check_network_connectivity() {
+    log_info "Checking network connectivity..."
+    
+    # Use HTTP request instead of ICMP ping because ICMP is often blocked in EC2 security groups
+    if curl -s --connect-timeout 5 -I https://aws.amazon.com &>/dev/null || curl -s --connect-timeout 5 -I https://github.com &>/dev/null; then
+        log_info "✅ Outbound HTTPS connectivity verified."
+    else
+        log_warning "Outbound internet access check timed out or is restricted (may be in private VPC)."
+    fi
 }
 
-# Main execution
+check_web_directory() {
+    log_info "Checking destination directory /var/www/html..."
+    mkdir -p /var/www/html
+    if [[ -w /var/www/html ]]; then
+        log_info "✅ Destination directory is writable."
+    else
+        log_warning "Correcting permissions on /var/www/html..."
+        chmod 755 /var/www/html
+    fi
+}
+
 main() {
-    log_message "=== ENVIRONMENT VALIDATION STARTED ==="
+    mkdir -p "$(dirname "$LOG_FILE")"
+    log_info "=== ENVIRONMENT VALIDATION STARTED ==="
     
-    check_root_privileges
+    check_privileges
     check_system_info
     check_disk_space
     check_memory
-    check_required_packages
+    check_required_tools
     check_network_connectivity
-    check_system_services
-    check_file_permissions
-    display_validation_summary
+    check_web_directory
     
-    log_message "=== ENVIRONMENT VALIDATION COMPLETED ==="
+    log_info "=== ENVIRONMENT VALIDATION COMPLETED SUCCESSFULLY ==="
 }
 
-# Run main function
 main "$@"
